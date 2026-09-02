@@ -2,6 +2,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
 from django.views import View
+from django.core.exceptions import PermissionDenied
 
 from applications.users.mixins import RoleRequiredMixin
 from applications.users.models import User
@@ -45,9 +46,8 @@ class RoleRequiredMixinTests(TestCase):
         request = self.factory.get('/dummy/')
         request.user = user
 
-        response = _EmployeeOnlyView.as_view()(request)
-
-        self.assertEqual(response.status_code, 403)
+        with self.assertRaises(PermissionDenied):
+            _EmployeeOnlyView.as_view()(request)
 
     def test_anonymous_user_is_redirected_to_login(self):
         request = self.factory.get('/dummy/')
@@ -65,9 +65,8 @@ class RoleRequiredMixinTests(TestCase):
         request = self.factory.get('/dummy/')
         request.user = user
 
-        response = _ResponsibleOnlyView.as_view()(request)
-
-        self.assertEqual(response.status_code, 403)
+        with self.assertRaises(PermissionDenied):
+            _ResponsibleOnlyView.as_view()(request)
 
     def test_user_with_both_roles_can_access_both_views(self):
         user = User.objects.create_user(
