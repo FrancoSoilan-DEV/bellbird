@@ -14,8 +14,8 @@ DJANGO_APPS = [
 ]
 
 LOCAL_APPS = [
-    'applications.employees',
-    'applications.responsibles',
+    'applications.expenses',
+    'applications.users',
 ]
 
 THIRD_PARTY_APPS = [
@@ -72,7 +72,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
+AUTH_USER_MODEL = 'users.User'
 
 LANGUAGE_CODE = 'es'
 
