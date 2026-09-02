@@ -1,5 +1,208 @@
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Ingresar</button>
-</form>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXU | Login</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        color: #16232B;
+        background: #FFFFFF;
+    }
+
+    .login-page {
+        display: flex;
+        width: 100%;
+        min-height: 100vh;
+    }
+
+    .login-brand {
+        flex: 0 0 40%;
+        background: #16323A;
+        color: #F2F5F4;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 4rem 3rem;
+    }
+
+    .login-brand h1 {
+        font-family: Georgia, "Iowan Old Style", serif;
+        font-size: 2.75rem;
+        font-weight: 400;
+        letter-spacing: 0.01em;
+        margin-bottom: 1rem;
+    }
+
+    .login-brand p {
+        color: #A9C0BC;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        max-width: 26ch;
+    }
+
+    .login-form-side {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+
+    .login-form-wrap {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .login-form-wrap h2 {
+        font-size: 1.35rem;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+    }
+
+    .login-form-wrap .subtitle {
+        color: #5C6B70;
+        font-size: 0.9rem;
+        margin-bottom: 2rem;
+    }
+
+    .field {
+        margin-bottom: 1.5rem;
+    }
+
+    .field label {
+        display: block;
+        font-size: 0.8rem;
+        color: #5C6B70;
+        margin-bottom: 0.4rem;
+    }
+
+    .field input[type="text"],
+    .field input[type="password"] {
+        width: 100%;
+        border: none;
+        border-bottom: 1.5px solid #E2E5E4;
+        padding: 0.5rem 0.1rem;
+        font-size: 1rem;
+        color: #16232B;
+        background: transparent;
+        transition: border-color 0.15s ease;
+    }
+
+    .field input[type="text"]:focus,
+    .field input[type="password"]:focus {
+        outline: none;
+        border-bottom-color: #2F8F86;
+    }
+
+    .field input[type="text"]:focus-visible,
+    .field input[type="password"]:focus-visible {
+        outline: 2px solid #2F8F86;
+        outline-offset: 3px;
+    }
+
+    .btn-submit {
+        width: 100%;
+        background: #2F8F86;
+        color: #FFFFFF;
+        border: none;
+        padding: 0.75rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 0.5rem;
+        transition: background 0.15s ease;
+    }
+
+    .btn-submit:hover {
+        background: #26746D;
+    }
+
+    .btn-submit:focus-visible {
+        outline: 2px solid #16323A;
+        outline-offset: 2px;
+    }
+
+    .form-errors {
+        background: #FBEAE5;
+        border-left: 3px solid #B3432B;
+        color: #8A3320;
+        font-size: 0.85rem;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .field-errors {
+        color: #B3432B;
+        font-size: 0.8rem;
+        margin-top: 0.35rem;
+    }
+
+    @media (max-width: 720px) {
+        .login-page {
+            flex-direction: column;
+        }
+        .login-brand {
+            flex: 0 0 auto;
+            padding: 2.5rem 2rem;
+        }
+        .login-brand h1 {
+            font-size: 2rem;
+        }
+        .login-brand p {
+            display: none;
+        }
+        .login-form-side {
+            padding: 2.5rem 1.5rem;
+        }
+    }
+</style>
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-brand">
+            <h1>EXU</h1>
+            <p>Sistema de aprobación de gastos. Registrá, revisá y aprobá con trazabilidad completa.</p>
+        </div>
+        <div class="login-form-side">
+            <div class="login-form-wrap">
+                <h2>Ingresar</h2>
+                <p class="subtitle">Accedé con tu usuario y contraseña.</p>
+
+                {% if form.non_field_errors %}
+                    <div class="form-errors">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="field">
+                        <label for="{{ form.username.id_for_label }}">Usuario</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="field-errors">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field">
+                        <label for="{{ form.password.id_for_label }}">Contraseña</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="field-errors">{{ form.password.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn-submit">Ingresar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

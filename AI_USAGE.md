@@ -1,41 +1,50 @@
 # AI_USAGE.md
 
-Registro de interacciones con IA que influyeron materialmente en la solución, según lo pedido en el enunciado. Se documentan solo las que produjeron una decisión o cambio real; se omiten consultas triviales de sintaxis o autocompletado.
+Registro de interacciones con IA que influyeron materialmente en la solución. Se documentan solo las que produjeron una decisión o cambio real; se omiten consultas triviales de sintaxis.
 
 Herramienta usada en todos los casos: **Claude** (Anthropic, vía claude.ai).
 
 ---
 
-### 1. Limpieza de configuración ASGI → WSGI
+### 1. Limpieza de configuración ASGI → WSGI y Docker Compose
 
-- **Objetivo/prompt representativo:** Partía de un esqueleto de proyecto configurado para ASGI/uvicorn (pensado originalmente para otro tipo de app). Consulté qué implicaba esa diferencia y qué había que ajustar para una app Django estándar con templates.
-- **Resultado obtenido:** Confirmación de que ASGI no aporta nada funcional para este caso de uso (sin WebSockets ni async), y una lista concreta de cambios: cambiar `CMD` del Dockerfile a `gunicorn config.wsgi:application`, sacar dependencias de `uvicorn`/`anyio`/`uvloop` de `requirements/base.txt`, mantener `asgiref` (dependencia interna de Django).
-- **Qué acepté/rechacé:** Acepté el diagnóstico completo. Antes de aplicarlo, revisé manualmente cada dependencia del `requirements/base.txt` original y decidí por mi cuenta cuáles sacar, dejando afuera algunas que la IA marcó como opcionales pero que preferí evaluar caso por caso (`click`, `idna`, `PyYAML`).
-- **Verificación:** `docker compose up --build` — la app levanta correctamente con `runserver`/WSGI sin errores de import ni de servidor.
-
----
-
-### 2. Debug de conexión Postgres en Docker Compose
-
-- **Objetivo/prompt representativo:** El contenedor `web` fallaba con `could not translate host name "db"` al intentar migrar contra Postgres.
-- **Resultado obtenido:** Diagnóstico de condición de carrera (Postgres "iniciado" pero no necesariamente listo para conexiones) y sugerencia de agregar `healthcheck` con `pg_isready` al servicio `db` más `depends_on: condition: service_healthy` en `web`.
-- **Qué acepté/rechacé:** Apliqué el healthcheck. El primer intento igual falló por una razón distinta (config vieja aún cacheada); lo resolví yo mismo con `docker compose down -v` para forzar una reconstrucción limpia de red y volumen, antes de reintentar.
-- **Verificación:** Log de `docker compose up --build` mostrando migraciones aplicadas correctamente y el servidor de desarrollo arrancando sin excepciones.
+- **Objetivo/prompt representativo:** Partía de un esqueleto de proyecto configurado para ASGI/uvicorn con un servicio Redis sin uso. Consulté qué implicaba esa configuración y qué convenía ajustar para una app Django estándar con templates.
+- **Resultado obtenido:** Diagnóstico de que ASGI y Redis no aportaban nada funcional al proyecto, y una lista de cambios concretos (Dockerfile a `gunicorn`, healthcheck de Postgres con `pg_isready`, `depends_on: condition: service_healthy`).
+- **Qué acepté/rechacé:** Acepté el diagnóstico general. Revisé manualmente cada dependencia del `requirements.txt` original antes de decidir cuáles sacar, en vez de aplicar la lista completa sin revisar.
+- **Verificación:** `docker compose up --build` — la app levanta correctamente; se resolvieron además dos errores reales de entorno (condición de carrera con Postgres, y un `TypeError` por un argumento de `CheckConstraint` renombrado entre versiones de Django) confirmando el comportamiento contra la versión real instalada.
 
 ---
 
-### 3. Representación de roles: booleanos vs. Django Groups
+### 2. Representación de roles: booleanos vs. Django Groups
 
-- **Objetivo/prompt representativo:** Consulté si convenía usar `django.contrib.auth.models.Group` o campos propios en el modelo `User` para distinguir empleado/responsable.
-- **Resultado obtenido:** La IA sugirió inicialmente considerar ambas opciones. Cuestioné específicamente el argumento de performance ("¿no es Groups más liviano para la base?"), y tras pedir el detalle de cómo funciona cada opción a nivel de tablas (Groups implica tablas intermedias many-to-many; booleanos son columnas directas), confirmé que mi intuición inicial (booleanos) era además la opción más simple en cuanto a lectura de datos, no solo en cuanto a legibilidad de código.
-- **Qué acepté/rechacé:** Rechacé la sugerencia de considerar un tercer rol tipo "superusuario aprobador" para resolver el caso límite de un único responsable con gasto propio — decidí que excedía el alcance del enunciado y lo documenté como limitación conocida en vez de implementarlo.
-- **Verificación:** Razonamiento validado manualmente contra el texto del enunciado (regla de que un usuario puede tener ambos roles simultáneamente) antes de decidir; pendiente de verificación automatizada vía tests unitarios sobre el modelo `User`.
+- **Objetivo/prompt representativo:** Consulté si convenía `Group` de Django o campos propios en `User` para distinguir empleado/responsable.
+- **Resultado obtenido:** Comparación de ambas opciones a nivel de esquema de base de datos (Groups implica tablas intermedias many-to-many).
+- **Qué acepté/rechacé:** Cuestioné el argumento de performance antes de aceptarlo, pidiendo el detalle de cómo funciona cada opción a nivel de tablas — confirmé que la opción de booleanos, que ya prefería por legibilidad, no tenía además ninguna desventaja real de rendimiento a esta escala. Decidí booleanos.
+- **Verificación:** razonamiento validado contra el texto del enunciado (un usuario puede tener ambos roles a la vez) antes de decidir; verificado luego con tests unitarios sobre las vistas protegidas.
 
 ---
 
-### 4. Diseño de `CustomLoginView` y mixins de permiso por rol
+### 3. Diseño de mixins de permiso: iteración hasta un diseño explícito
 
-- **Objetivo/prompt representativo:** Cómo transformar una vista de login basada en `TemplateView` a una que use la autenticación real de Django, y cómo redirigir según el rol del usuario tras loguearse.
-- **Resultado obtenido:** Estructura de `CustomLoginView(LoginView)` con `get_success_url()` sobreescrito, más un par de mixins (`EmployeeRequiredMixin`, `ResponsibleRequiredMixin`) basados en `LoginRequiredMixin` + `UserPassesTestMixin`.
-- **Qué acepté/rechacé:** Acepté la estructura general. Adapté los mixins para que lean los campos booleanos del `User` en vez de grupos, en línea con la decisión del punto 3.
-- **Verificación:** Pendiente — se validará con tests de integración HTTP (usuario sin rol correcto recibe 403 al intentar acceder a una vista protegida).
+- **Objetivo/prompt representativo:** Pedí un mixin que combinara "estar logueado" y "tener el rol correcto" en una sola pieza reutilizable para las vistas protegidas.
+- **Resultado obtenido:** La primera propuesta fue un único `RoleRequiredMixin` genérico, configurable con un atributo `required_role`. No me convenció ese nivel de indirección para un caso de solo dos roles fijos.
+- **Qué acepté/rechacé:** Rechacé la versión genérica y pedí explícitamente dos mixins separados y directos (`EmployeeRequiredMixin`, `ResponsibleRequiredMixin`). También rechacé código de vistas propuesto antes de tener los tests correspondientes escritos, exigiendo que el ciclo se respetara test-primero en cada paso, y corregí en el camino una inconsistencia donde una sugerencia importaba una clase que ya había sido eliminada del proyecto.
+- **Verificación:** suite de tests (`test_user_with_matching_role_can_access`, `test_user_without_matching_role_is_denied`, etc.) corrida en cada paso del ciclo rojo-verde; documentado en `DECISIONS.md`.
+
+---
+
+### 4. Login con redirección por rol y dashboard protegido (flujo completo)
+
+- **Objetivo/prompt representativo:** Construir `CustomLoginView` con redirección según rol y una vista de dashboard de empleado protegida, siguiendo TDD con `self.client` en vez de vistas de prueba aisladas.
+- **Resultado obtenido:** Tests que fallaron primero por `NoReverseMatch` (rutas inexistentes), y luego por errores de configuración menores (import de una vista no creada aún, templates faltantes) hasta llegar a la suite en verde.
+- **Qué acepté/rechacé:** Acepté la estructura general de vistas y urls una vez que los tests ya estaban escritos y en rojo por el motivo correcto. Corregí manualmente la ubicación de la vista del dashboard (inicialmente ubicada por error en `users` en vez de `expenses`) antes de continuar.
+- **Verificación:** `docker compose exec web python manage.py test applications.users` — 2/2 tests en verde tras resolver cada error de configuración de forma incremental.
+
+---
+
+### 5. Estilos CSS del formulario de login
+
+- **Objetivo/prompt representativo:** Pedí estilizar el template de login con CSS embebido en el mismo archivo, sin crear una carpeta de estilos separada.
+- **Resultado obtenido:** HTML con `<style>` inline, paleta y tipografía propuestas, layout de panel partido.
+- **Qué acepté/rechacé:** Pendiente de revisión visual en navegador antes de aceptar el resultado final.
+- **Verificación:** pendiente — validar visualmente en navegador y confirmar que la suite de tests existente sigue en verde tras el cambio (el CSS no debería afectar el comportamiento, pero se re-corre por buena práctica).
