@@ -5,7 +5,8 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
+    path('', include('applications.users.urls')),
+    path('', include('applications.expenses.urls')),
 ]
 
 if settings.DEBUG:
