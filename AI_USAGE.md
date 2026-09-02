@@ -48,3 +48,12 @@ Herramienta usada en todos los casos: **Claude** (Anthropic, vía claude.ai).
 - **Resultado obtenido:** HTML con `<style>` inline, paleta y tipografía propuestas, layout de panel partido.
 - **Qué acepté/rechacé:** Pendiente de revisión visual en navegador antes de aceptar el resultado final.
 - **Verificación:** pendiente — validar visualmente en navegador y confirmar que la suite de tests existente sigue en verde tras el cambio (el CSS no debería afectar el comportamiento, pero se re-corre por buena práctica).
+
+---
+
+### 6. Creación de gasto: formulario, vista y validación de importe
+
+- **Objetivo/prompt representativo:** Implementar la funcionalidad de creación de gastos para empleados, siguiendo TDD: primero el camino feliz (importe válido → estado PENDING), luego casos de validación (importe cero o negativo).
+- **Resultado obtenido:** Propuesta de `ExpenseForm` (ModelForm), `ExpenseCreateView` (con asignación automática del `owner` en `form_valid`), ruta y template mínimo. Para la validación, propuesta de dos tests separados verificando importe cero y negativo.
+- **Qué acepté/rechacé:** Señalé por mi cuenta que el primer test (camino feliz) no cubría ningún caso de validación, antes de que se propusiera continuar con otra funcionalidad — esa observación motivó el segundo ciclo. Además, uno de los tests de validación propuestos comparaba el mensaje de error en inglés; al fallar, se identificó que el proyecto usa `LANGUAGE_CODE='es'` y el mensaje real viene traducido — se optó por reescribir el test para verificar la presencia del error sin atarse al texto exacto, en vez de simplemente traducir el string (decisión más robusta a futuro).
+- **Verificación:** `docker compose exec web python manage.py test applications.expenses` — 3/3 tests en verde. Se depuró además un error real de `TemplateDoesNotExist` causado por un desajuste entre el `template_name` de las vistas y la organización real de carpetas de templates (`employee/` en vez de `expenses/`), corregido antes de dar el ciclo por cerrado.

@@ -13,7 +13,7 @@ class EmployeeDashboardView(EmployeeRequiredMixin, TemplateView):
 class ExpenseCreateView(EmployeeRequiredMixin, CreateView):
     model = Expense
     form_class = ExpenseForm
-    template_name = 'expense_form.html'
+    template_name = 'employee/expense_form.html'
     success_url = reverse_lazy('e-dash')
 
     def form_valid(self, form):

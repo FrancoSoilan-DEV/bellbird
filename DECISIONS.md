@@ -69,13 +69,29 @@ class ResponsibleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 ---
 
-## 6. Limitación conocida (fuera de alcance)
+## 6. Organización de templates: por rol, no por app
+
+**Decisión:** `applications/expenses/templates/employee/` (y su futura contraparte `responsible/`), en vez de `applications/expenses/templates/expenses/`.
+
+**Por qué:** surgió en la práctica al crear las plantillas — se agrupó por rol de usuario (quién ve la pantalla) en vez de por app de Django (dónde vive el código). Es una decisión de organización válida siempre que el `template_name` de cada vista se mantenga consistente con la carpeta real; se corrigió un desajuste inicial donde las vistas apuntaban a `expenses/` mientras los archivos físicos estaban en `employee/`.
+
+---
+
+## 7. Mensajes de validación en tests: comportamiento, no texto exacto
+
+**Decisión:** los tests que verifican errores de formulario comprueban `form.errors.get('campo')` (que el campo tiene un error), no el texto literal del mensaje.
+
+**Por qué:** el proyecto tiene `LANGUAGE_CODE = 'es'`, por lo que Django traduce automáticamente los mensajes de validación de sus propios validadores (ej. `MinValueValidator`). Un test que compara el texto exacto en inglés falla no porque la regla de negocio esté mal, sino porque el mensaje real viene en español — un falso negativo que no dice nada sobre la corrección del código. Verificar la presencia del error (sin atarse a la redacción) prueba el comportamiento real sin depender de un detalle de implementación de terceros.
+
+---
+
+## 8. Limitación conocida (fuera de alcance)
 
 Si el sistema tiene un único usuario con rol `responsable` y ese usuario crea un gasto propio, el gasto queda pendiente indefinidamente. No se implementó escalamiento jerárquico de aprobaciones — excede el alcance del enunciado. Se resuelve operativamente garantizando al menos dos usuarios con rol `responsable` en los datos demo.
 
 ---
 
-## 7. Ciclos TDD
+## 9. Ciclos TDD
 
 ### Ciclo 1: `EmployeeRequiredMixin` (aislado)
 
@@ -91,4 +107,11 @@ Si el sistema tiene un único usuario con rol `responsable` y ese usuario crea u
 - **Implementación mínima (Green):** se crearon `CustomLoginView` (con `get_success_url` según `is_responsible`), `EmployeeDashboardView` (usando `EmployeeRequiredMixin`) y las rutas correspondientes en `users/urls.py` y `expenses/urls.py`. En el camino aparecieron tres errores intermedios que no eran del comportamiento en sí sino de piezas de soporte faltantes: un `ImportError` por una URL que importaba una vista de `expenses` antes de que existiera, y dos `TemplateDoesNotExist` (login y dashboard) por templates no creados aún. Cada uno se resolvió antes de continuar, y la suite se corrió después de cada corrección.
 - **Refactor:** pendiente — el código actual es corto y no presenta duplicación evidente que amerite extracción.
 
-*(Falta un tercer ciclo formal para completar el mínimo de tres requerido — candidatos naturales: login de responsable → `r-dash`, y rechazo cruzado de rol en cada dashboard.)*
+### Ciclo 3: Creación de gasto — camino feliz y validación de importe
+
+- **Comportamiento esperado:** un empleado logueado puede crear un gasto con datos válidos, que queda en estado `PENDING`; un importe igual o menor a cero es rechazado sin crear el registro.
+- **Test (Red):** `test_employee_can_create_expense_with_valid_data` falló primero con `NoReverseMatch` (la ruta `expense-create` no existía). Luego, al agregar `test_amount_zero_is_rejected` y `test_negative_amount_is_rejected`, ambos fallaron con `TemplateDoesNotExist`, por un desajuste entre el `template_name` configurado en la vista y la carpeta real de templates (ver decisión 6).
+- **Implementación mínima (Green):** se creó `ExpenseForm` (ModelForm sobre `Expense`), `ExpenseCreateView` (asigna `owner` al usuario logueado en `form_valid`), la ruta correspondiente y el template. Tras corregir la ruta del template, uno de los dos tests de validación seguía fallando — no por un bug de la regla de negocio (el campo `amount` sí registraba el error), sino porque el test comparaba el mensaje de error en inglés contra el mensaje real en español (ver decisión 7). Se ajustó el test para verificar la presencia del error en el campo en vez del texto exacto.
+- **Refactor:** se evaluó unificar los dos tests de importe inválido (cero y negativo) en uno solo parametrizado; se decidió no hacerlo por ahora — con dos casos, la duplicación es mínima y el código actual es más legible que la abstracción.
+
+Con este ciclo se completa el mínimo de tres ciclos TDD documentados que pide el enunciado.
