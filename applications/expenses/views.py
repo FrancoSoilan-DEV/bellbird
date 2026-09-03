@@ -1,4 +1,9 @@
-from django.views.generic import TemplateView, CreateView, ListView
+from django.views.generic import (
+    TemplateView, 
+    CreateView, 
+    ListView,
+    DetailView,
+)
 from django.urls import reverse_lazy
 from applications.users.mixins import EmployeeRequiredMixin
 
@@ -27,3 +32,13 @@ class ExpenseListView(EmployeeRequiredMixin, ListView):
 
     def get_queryset(self):
         return Expense.objects.filter(owner=self.request.user)
+    
+    
+class ExpenseDetailView(EmployeeRequiredMixin, DetailView):
+    model = Expense
+    template_name = 'employee/expense_detail.html'
+    context_object_name = 'expense'
+
+    def get_queryset(self):
+        return Expense.objects.filter(owner=self.request.user)
+      

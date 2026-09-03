@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ expense.title }}</title>
+</head>
+<body>
+    <h1>{{ expense.title }}</h1>
+    <p>Estado: {{ expense.get_status_display }}</p>
+    <p>Categoría: {{ expense.get_category_display }}</p>
+    <p>Importe: {{ expense.amount }}</p>
+    <p>Fecha: {{ expense.date }}</p>
+    {% if expense.description %}<p>Descripción: {{ expense.description }}</p>{% endif %}
+
+    {% if expense.decision %}
+        <h2>Decisión</h2>
+        <p>Resultado: {{ expense.decision.get_result_display }}</p>
+        <p>Comentario: {{ expense.decision.comment }}</p>
+        <p>Fecha: {{ expense.decision.decided_at }}</p>
+    {% endif %}
+</body>
+</html>
