@@ -1,3 +1,4 @@
+from django.views import View
 from django.views.generic import (
     TemplateView, 
     CreateView, 
@@ -7,9 +8,12 @@ from django.views.generic import (
 )
 from django.urls import reverse_lazy
 from applications.users.mixins import EmployeeRequiredMixin, ResponsibleRequiredMixin
+from django.db import transaction
+from django.shortcuts import redirect, get_object_or_404
+from django.core.exceptions import PermissionDenied
 
 from .forms import *
-
+from .models import Expense, Decision
 # ==========================================
 # ----- Employee
 # ==========================================
@@ -75,5 +79,30 @@ class PendingExpenseListView(ResponsibleRequiredMixin, ListView):
             queryset = queryset.filter(owner_id=owner_id)
 
         return queryset
+    
 
 
+class ExpenseDecisionView(ResponsibleRequiredMixin, View):
+
+    def post(self, request, pk):
+        expense = get_object_or_404(
+            Expense, pk=pk, status=Expense.Status.PENDING
+        )
+
+        if not expense.can_be_decided_by(request.user):
+            raise PermissionDenied
+
+        result = request.POST.get('result')
+        comment = request.POST.get('comment', '')
+
+        with transaction.atomic():
+            Decision.objects.create(
+                expense=expense,
+                responsible=request.user,
+                result=result,
+                comment=comment,
+            )
+            expense.status = result
+            expense.save(update_fields=['status', 'updated_at'])
+
+        return redirect('pending-expenses')
