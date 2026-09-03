@@ -18,5 +18,9 @@
         <p>Comentario: {{ expense.decision.comment }}</p>
         <p>Fecha: {{ expense.decision.decided_at }}</p>
     {% endif %}
+
+    {% if expense.can_be_edited %}
+        <p><a href="{% url 'expense-update' expense.pk %}">Editar</a></p>
+    {% endif %}
 </body>
 </html>

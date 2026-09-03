@@ -268,6 +268,22 @@ class PendingExpenseListViewTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         
+    def test_defaults_to_pending_when_no_status_given(self):
+        response = self.client.get(reverse('pending-expenses'))
+
+        titles = [e.title for e in response.context['expenses']]
+        self.assertIn('Pendiente de emp1', titles)
+        self.assertNotIn('Ya decidido', titles)
+
+    def test_filters_by_status(self):
+        response = self.client.get(
+            reverse('pending-expenses'), {'status': Expense.Status.APPROVED}
+        )
+
+        titles = [e.title for e in response.context['expenses']]
+        self.assertIn('Ya decidido', titles)
+        self.assertNotIn('Pendiente de emp1', titles)
+        
         
 class ExpenseDecisionViewTests(TestCase):
     def setUp(self):
@@ -372,3 +388,64 @@ class ResponsibleDashboardProtectionTests(TestCase):
         response = self.client.get(reverse('r-dash'))
 
         self.assertEqual(response.status_code, 403)
+        
+class ExpenseModelTests(TestCase):
+    def test_str_representation(self):
+        owner = User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        expense = Expense.objects.create(
+            owner=owner, title='Almuerzo', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01',
+        )
+
+        self.assertEqual(str(expense), 'Almuerzo (Pendiente)')
+
+    def test_pending_expense_can_be_edited(self):
+        owner = User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        expense = Expense.objects.create(
+            owner=owner, title='Almuerzo', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01',
+        )
+
+        self.assertTrue(expense.can_be_edited())
+
+    def test_approved_expense_cannot_be_edited(self):
+        owner = User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        expense = Expense.objects.create(
+            owner=owner, title='Almuerzo', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01', status=Expense.Status.APPROVED,
+        )
+
+        self.assertFalse(expense.can_be_edited())
+
+# --- Models Tests
+
+class DecisionModelTests(TestCase):
+    def test_str_representation(self):
+        owner = User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        responsible = User.objects.create_user(
+            username='responsable1', password='pass123',
+            is_employee=False, is_responsible=True,
+        )
+        expense = Expense.objects.create(
+            owner=owner, title='Almuerzo', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01',
+        )
+        decision = Decision.objects.create(
+            expense=expense, responsible=responsible,
+            result=Decision.Result.APPROVED, comment='OK',
+        )
+
+        self.assertIn('Almuerzo', str(decision))
+        self.assertIn('Aprobado', str(decision))
