@@ -60,3 +60,39 @@ class ExpenseCreateValidationTests(TestCase):
         self.assertEqual(Expense.objects.count(), 0)
         self.assertEqual(response.status_code, 200)
     
+    
+    
+    
+class ExpenseListViewTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        self.other = User.objects.create_user(
+            username='empleado2', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        Expense.objects.create(
+            owner=self.owner, title='Mío', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01',
+        )
+        Expense.objects.create(
+            owner=self.other, title='Ajeno', category=Expense.Category.OTHER,
+            amount='20.00', date='2026-09-01',
+        )
+        self.client.login(username='empleado1', password='pass123')
+
+    def test_employee_only_sees_own_expenses(self):
+        response = self.client.get(reverse('expense-list'))
+
+        titles = [e.title for e in response.context['expenses']]
+        self.assertIn('Mío', titles)
+        self.assertNotIn('Ajeno', titles)
+
+    def test_employee_list_shows_empty_state_message(self):
+        Expense.objects.all().delete()
+
+        response = self.client.get(reverse('expense-list'))
+
+        self.assertContains(response, 'No tenés gastos registrados')
