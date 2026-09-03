@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gastos pendientes</title>
+</head>
+<body>
+    <h1>Gastos pendientes</h1>
+
+    {% if expenses %}
+      <ul>
+        {% for expense in expenses %}
+          <li>{{ expense.title }} — {{ expense.owner }} — {{ expense.amount }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No hay gastos pendientes</p>
+    {% endif %}
+</body>
+</html>

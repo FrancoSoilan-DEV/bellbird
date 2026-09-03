@@ -6,11 +6,13 @@ from django.views.generic import (
     UpdateView,
 )
 from django.urls import reverse_lazy
-from applications.users.mixins import EmployeeRequiredMixin
+from applications.users.mixins import EmployeeRequiredMixin, ResponsibleRequiredMixin
 
 from .forms import *
 
+# ==========================================
 # ----- Employee
+# ==========================================
 
 class EmployeeDashboardView(EmployeeRequiredMixin, TemplateView):
     template_name = 'employee/dashboard.html'
@@ -54,3 +56,24 @@ class ExpenseUpdateView(EmployeeRequiredMixin, UpdateView):
             owner=self.request.user,
             status=Expense.Status.PENDING,
         )      
+
+
+# ==========================================
+# ----- Responsible
+# ==========================================
+
+class PendingExpenseListView(ResponsibleRequiredMixin, ListView):
+    model = Expense
+    template_name = 'responsible/pending_list.html'
+    context_object_name = 'expenses'
+
+    def get_queryset(self):
+        queryset = Expense.objects.filter(status=Expense.Status.PENDING)
+
+        owner_id = self.request.GET.get('owner')
+        if owner_id:
+            queryset = queryset.filter(owner_id=owner_id)
+
+        return queryset
+
+
