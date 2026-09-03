@@ -75,7 +75,8 @@ class PendingExpenseListView(ResponsibleRequiredMixin, ListView):
     context_object_name = 'expenses'
 
     def get_queryset(self):
-        queryset = Expense.objects.filter(status=Expense.Status.PENDING)
+        status = self.request.GET.get('status', Expense.Status.PENDING)
+        queryset = Expense.objects.filter(status=status)
 
         owner_id = self.request.GET.get('owner')
         if owner_id:
