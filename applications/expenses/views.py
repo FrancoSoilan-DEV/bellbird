@@ -3,6 +3,7 @@ from django.views.generic import (
     CreateView, 
     ListView,
     DetailView,
+    UpdateView,
 )
 from django.urls import reverse_lazy
 from applications.users.mixins import EmployeeRequiredMixin
@@ -42,3 +43,14 @@ class ExpenseDetailView(EmployeeRequiredMixin, DetailView):
     def get_queryset(self):
         return Expense.objects.filter(owner=self.request.user)
       
+class ExpenseUpdateView(EmployeeRequiredMixin, UpdateView):
+    model = Expense
+    form_class = ExpenseForm
+    template_name = 'employee/expense_form.html'
+    success_url = reverse_lazy('e-dash')
+
+    def get_queryset(self):
+        return Expense.objects.filter(
+            owner=self.request.user,
+            status=Expense.Status.PENDING,
+        )      
