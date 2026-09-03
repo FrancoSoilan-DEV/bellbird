@@ -96,3 +96,42 @@ class ExpenseListViewTests(TestCase):
         response = self.client.get(reverse('expense-list'))
 
         self.assertContains(response, 'No tenés gastos registrados')
+        
+        
+        
+class ExpenseDetailViewTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        self.other = User.objects.create_user(
+            username='empleado2', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        self.expense = Expense.objects.create(
+            owner=self.owner, title='Mío', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01',
+        )
+
+    def test_owner_can_view_own_expense_detail(self):
+        self.client.login(username='empleado1', password='pass123')
+
+        response = self.client.get(
+            reverse('expense-detail', args=[self.expense.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['expense'], self.expense)
+
+    def test_employee_cannot_view_others_expense_detail(self):
+        self.client.login(username='empleado2', password='pass123')
+
+        response = self.client.get(
+            reverse('expense-detail', args=[self.expense.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
+        
+        
+        
