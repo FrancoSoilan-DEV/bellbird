@@ -1,4 +1,4 @@
-from django.views.generic import TemplateView, CreateView
+from django.views.generic import TemplateView, CreateView, ListView
 from django.urls import reverse_lazy
 from applications.users.mixins import EmployeeRequiredMixin
 
@@ -19,3 +19,11 @@ class ExpenseCreateView(EmployeeRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.owner = self.request.user
         return super().form_valid(form)
+    
+class ExpenseListView(EmployeeRequiredMixin, ListView):
+    model = Expense
+    template_name = 'employee/expense_list.html'
+    context_object_name = 'expenses'
+
+    def get_queryset(self):
+        return Expense.objects.filter(owner=self.request.user)
