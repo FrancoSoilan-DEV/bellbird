@@ -1,1 +1,8 @@
 <h1>Employee Dashbooard</h1>
+{% if messages %}
+  <ul>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}

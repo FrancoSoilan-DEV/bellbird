@@ -6,6 +6,7 @@ from django.views.generic import (
     DetailView,
     UpdateView,
 )
+from django.contrib import messages
 from django.urls import reverse_lazy
 from applications.users.mixins import EmployeeRequiredMixin, ResponsibleRequiredMixin
 from django.db import transaction
@@ -30,6 +31,7 @@ class ExpenseCreateView(EmployeeRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
+        messages.success(self.request, 'Gasto creado correctamente.')
         return super().form_valid(form)
     
 class ExpenseListView(EmployeeRequiredMixin, ListView):
@@ -59,8 +61,11 @@ class ExpenseUpdateView(EmployeeRequiredMixin, UpdateView):
         return Expense.objects.filter(
             owner=self.request.user,
             status=Expense.Status.PENDING,
-        )      
+        )
 
+    def form_valid(self, form):
+        messages.success(self.request, 'Gasto actualizado correctamente.')
+        return super().form_valid(form)
 
 # ==========================================
 # ----- Responsible
@@ -109,4 +114,5 @@ class ExpenseDecisionView(ResponsibleRequiredMixin, View):
             expense.status = result
             expense.save(update_fields=['status', 'updated_at'])
 
+        messages.success(self.request, 'Decisión registrada correctamente.')
         return redirect('pending-expenses')

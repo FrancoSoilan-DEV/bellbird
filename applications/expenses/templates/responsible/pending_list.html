@@ -6,7 +6,13 @@
 </head>
 <body>
     <h1>Gastos pendientes</h1>
-
+    {% if messages %}
+      <ul>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
     {% if expenses %}
       <ul>
         {% for expense in expenses %}

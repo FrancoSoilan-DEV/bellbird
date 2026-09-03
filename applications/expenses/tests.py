@@ -30,6 +30,28 @@ class ExpenseCreateViewTests(TestCase):
         self.assertEqual(expense.owner.username, 'empleado1')
         self.assertEqual(response.status_code, 302)
         
+    def test_success_message_shown_after_creating_expense(self):
+        User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        self.client.login(username='empleado1', password='pass123')
+
+        response = self.client.post(reverse('expense-create'), {
+            'title': 'Con mensaje',
+            'category': Expense.Category.OTHER,
+            'amount': '50.00',
+            'date': '2026-09-01',
+            'description': '',
+        }, follow=True)
+
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertIn('creado', str(messages[0]).lower())
+        
+        
+    
+        
 class ExpenseCreateValidationTests(TestCase):
     def setUp(self):
         User.objects.create_user(
@@ -210,6 +232,25 @@ class ExpenseUpdateViewTests(TestCase):
         self.assertEqual(self.pending_expense.title, 'Original')
         self.assertEqual(response.status_code, 404)
         
+    def test_success_message_shown_after_editing_expense(self):
+        self.client.login(username='empleado1', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-update', args=[self.pending_expense.pk]),
+            {
+                'title': 'Editado',
+                'category': Expense.Category.OTHER,
+                'amount': '15.00',
+                'date': '2026-09-01',
+                'description': '',
+            },
+            follow=True,
+        )
+
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertIn('actualizado', str(messages[0]).lower())
+        
 # ==========================================
 # ----- Responsible
 # ==========================================
@@ -371,6 +412,20 @@ class ExpenseDecisionViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+    
+    def test_success_message_shown_after_deciding_expense(self):
+        self.client.login(username='responsable1', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-decide', args=[self.expense.pk]),
+            {'result': Decision.Result.APPROVED, 'comment': 'Todo en orden'},
+            follow=True,
+        )
+
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertIn('registrada', str(messages[0]).lower())
+        
         
 class ResponsibleDashboardProtectionTests(TestCase):
     def test_anonymous_user_is_redirected_to_login(self):
