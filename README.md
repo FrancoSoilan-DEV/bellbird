@@ -5,33 +5,39 @@ Aplicación Django para que empleados registren gastos y responsables los aprueb
 ## Prerrequisitos
 
 - Docker y Docker Compose
-- (Alternativa sin Docker) Python 3.13, PostgreSQL 16 o SQLite
+- En Windows: Git Bash (para correr los scripts `.sh`) — viene incluido con [Git para Windows](https://git-scm.com/download/win)
 
-## Puesta en marcha (Docker — recomendado)
+## Puesta en marcha
 
-1. Copiá `.env.example` a `.env` y completá las variables (sin secretos reales, valores de desarrollo alcanzan):
+1. Copiá `.env.example` a `.env` y completá las variables (valores de desarrollo alcanzan, sin secretos reales):
 
 ```bash
    cp .env.example .env
 ```
 
-2. Levantá el stack:
+2. Ejecutá:
 
 ```bash
-   docker compose up --build
+   bash run.sh
 ```
 
-   Esto aplica migraciones automáticamente y levanta el servidor de desarrollo en `http://localhost:8000/`.
-
-3. **[PENDIENTE]** Cargar datos demo — ver sección siguiente.
+   Esto verifica prerrequisitos, levanta los contenedores, aplica migraciones y carga datos demo automáticamente. La aplicación queda disponible en `http://localhost:8000/`.
 
 ## Datos demo
 
-> **[PENDIENTE — a completar]**
-> Falta el comando/fixture para cargar usuarios demo. Una vez implementado, documentar acá:
-> - Comando exacto (`python manage.py loaddata ...` o management command custom)
-> - Al menos un usuario empleado y un usuario responsable, con sus credenciales
-> - Un caso de gasto ya rechazado, para poder recorrer ese flujo sin crear datos manualmente
+El comando `seed_demo_data` (ejecutado automáticamente por `run.sh`) crea los siguientes usuarios, con contraseña `demo1234` para todos:
+
+| Usuario | Rol | Notas |
+|---|---|---|
+| `empleado1` | Empleado | Tiene un gasto pendiente, uno aprobado y uno rechazado — permite recorrer los tres estados sin cargar datos a mano |
+| `responsable1` | Responsable | Decidió los gastos aprobado/rechazado de `empleado1` en el seed |
+| `dual1` | Empleado + Responsable | Para probar en vivo la regla de "nadie aprueba su propio gasto" |
+
+Podés volver a correr el comando en cualquier momento sin duplicar datos (es idempotente):
+
+```bash
+docker compose exec web python manage.py seed_demo_data
+```
 
 ## URLs principales
 
@@ -44,28 +50,21 @@ Aplicación Django para que empleados registren gastos y responsables los aprueb
 | `/expenses/<id>/` | Detalle de un gasto |
 | `/expenses/<id>/edit/` | Editar gasto (solo propio y pendiente) |
 | `/responsible/dashboard/` | Panel de responsable |
-| `/responsible/pending/` | Gastos pendientes (filtrable por `?owner=` y `?status=`) |
+| `/responsible/pending/` | Gastos pendientes (filtrable por `?owner=<id>` y `?status=PENDING\|APPROVED\|REJECTED`) |
 
 ## Comandos
 
-Ejecutar la suite de tests:
+Correr la suite de tests con cobertura de ramas:
 
 ```bash
-docker compose exec web python manage.py test applications
+bash test.sh
 ```
 
-Ejecutar tests con cobertura de ramas:
-
-```bash
-docker compose exec web coverage run --branch --source='applications' manage.py test
-docker compose exec web coverage report -m
-```
-
-> **[PENDIENTE]** Reemplazar por `./run.sh` y `./test.sh` como entrada única, según pide el enunciado (sección 6).
+Requiere que los servicios ya estén levantados (`bash run.sh` primero).
 
 ## Arquitectura
 
-Ver `DECISIONS.md` para el detalle de decisiones técnicas (representación de roles, estructura de apps, atomicidad de decisiones, etc.).
+Ver `DECISIONS.md` para el detalle de decisiones técnicas (representación de roles, estructura de apps, atomicidad de decisiones, filtros del listado de responsable, etc.).
 
 ## Uso de IA
 
