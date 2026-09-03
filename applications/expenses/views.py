@@ -65,6 +65,9 @@ class ExpenseUpdateView(EmployeeRequiredMixin, UpdateView):
 # ==========================================
 # ----- Responsible
 # ==========================================
+class ResponsibleDashboardView(ResponsibleRequiredMixin, TemplateView):
+    template_name = 'responsible/dashboard.html'
+
 
 class PendingExpenseListView(ResponsibleRequiredMixin, ListView):
     model = Expense

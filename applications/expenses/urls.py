@@ -11,6 +11,7 @@ urlpatterns = [
     path('expenses/<int:pk>/', ExpenseDetailView.as_view(), name='expense-detail'),
     path('expenses/<int:pk>/edit/', ExpenseUpdateView.as_view(), name='expense-update'),
     # responsible
+    path('responsible/dashboard/', ResponsibleDashboardView.as_view(), name='r-dash'),
     path('responsible/pending/', PendingExpenseListView.as_view(), name='pending-expenses'),
     path('expenses/<int:pk>/decide/', ExpenseDecisionView.as_view(), name='expense-decide'),
 ]
