@@ -1,8 +1,5 @@
 asgiref==3.12.1
-click==8.4.2
-colorama==0.4.6
 Django==6.1
-idna==3.19
 psycopg2-binary==2.9.10
 python-dotenv==1.2.3
 PyYAML==6.0.3

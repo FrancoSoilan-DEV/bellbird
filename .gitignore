@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Django
+*.log
+staticfiles/
+media/
+db.sqlite3
+
+# Entorno
+.env
+
+# Coverage
+.coverage
+htmlcov/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

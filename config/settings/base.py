@@ -86,3 +86,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = '/app/staticfiles'
+
+
+LOGIN_URL = '/'

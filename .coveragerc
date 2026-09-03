@@ -1,0 +1,11 @@
+[run]
+branch = True
+source = applications
+
+omit =
+    */migrations/*
+    */management/commands/seed_demo_data.py
+    manage.py
+
+[report]
+show_missing = True

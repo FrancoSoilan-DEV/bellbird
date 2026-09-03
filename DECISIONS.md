@@ -115,3 +115,59 @@ Si el sistema tiene un único usuario con rol `responsable` y ese usuario crea u
 - **Refactor:** se evaluó unificar los dos tests de importe inválido (cero y negativo) en uno solo parametrizado; se decidió no hacerlo por ahora — con dos casos, la duplicación es mínima y el código actual es más legible que la abstracción.
 
 Con este ciclo se completa el mínimo de tres ciclos TDD documentados que pide el enunciado.
+
+
+
+---
+
+## 10. Filtro de estado en el listado de responsable: reinterpretación del criterio
+
+**Contexto:** el enunciado pide que el responsable pueda *"listar gastos pendientes y filtrarlos, como mínimo, por estado y empleado."* La vista `PendingExpenseListView` por diseño ya muestra solo pendientes — el filtro por "estado" sobre una lista que ya es monoestado parecía redundante.
+
+**Decisión:** en vez de crear una vista separada para historial, se extendió la misma vista para que el parámetro `?status=` sea configurable, con `PENDING` como valor por defecto. Esto permite que la misma URL sirva tanto para el caso de uso principal (ver pendientes) como para consultar el historial (`?status=APPROVED` o `?status=REJECTED`), cubriendo también la capacidad de "consultar el historial" que el enunciado exige al responsable en la misma tabla de roles.
+
+**Por qué:** no hay jerarquía de aprobación en el sistema (cualquier responsable puede decidir sobre cualquier empleado, según lo definido en la decisión 1 y confirmado por el criterio 10). Con esa premisa, agregar una vista nueva solo para historial hubiera sido duplicar filtrado y permisos ya resueltos en `PendingExpenseListView`. Un único endpoint parametrizable es más simple y coherente con el principio de "no exigimos arquitectura específica" del enunciado.
+
+---
+
+## 11. Mensajes de confirmación: `django.contrib.messages` sobre alternativas
+
+**Decisión:** se usa el framework de mensajes de Django (ya declarado en `MIDDLEWARE`/`INSTALLED_APPS` por defecto) para las confirmaciones tras crear, editar y decidir un gasto (criterio 15), en vez de mensajes ad-hoc en cada template o parámetros en la URL de redirección.
+
+**Por qué:** es la solución estándar de Django para este patrón (POST → redirect → mensaje de una sola vez), evita reinventar el mecanismo, y se integra directamente con el flujo `form_valid()`/`redirect()` que ya usan las vistas existentes.
+
+**Nota de verificación importante:** el test que confirma el mensaje (`response.context['messages']`) pasa incluso si el template de destino no renderiza ningún HTML visible — el context processor de Django agrega `messages` al contexto de cualquier respuesta, se muestre o no. Esto se detectó como una diferencia entre "el test pasa" y "el criterio 15 está cumplido de verdad" (confirmación *visible*): fue necesario agregar explícitamente el bloque `{% if messages %}` en los templates de destino (`employee/dashboard.html`, `responsible/pending_list.html`) para que la confirmación apareciera en pantalla, no solo en el contexto de test.
+
+---
+
+## 12. Ciclos TDD adicionales (continuación de la sección 9)
+
+### Ciclo 4: `ExpenseDetailView` — consulta con control de acceso por id
+
+- **Comportamiento esperado:** el dueño de un gasto puede ver su detalle; otro empleado que intente acceder por id a un gasto ajeno recibe 404.
+- **Test (Red):** ambos tests fallaron con `NoReverseMatch: 'expense-detail'`, porque ni la vista ni la ruta existían.
+- **Implementación mínima (Green):** `ExpenseDetailView` (`DetailView`) con `get_queryset()` filtrado por `owner=self.request.user` — mismo patrón que `ExpenseListView`. La diferencia relevante es que acá el filtrado no es solo una optimización de UX (ocultar gastos ajenos de una lista) sino un control de seguridad real: sin el filtro, cualquier usuario autenticado podría ver el detalle de cualquier gasto adivinando su id en la URL.
+- **Refactor:** ninguno necesario; el patrón ya estaba establecido por `ExpenseListView`.
+
+### Ciclo 5: `ExpenseUpdateView` — edición restringida a propio y pendiente
+
+- **Comportamiento esperado:** un empleado puede editar su gasto solo si está `PENDING`; ni el dueño puede editar uno ya decidido, y nadie puede editar el gasto de otro.
+- **Test (Red):** tres tests (camino feliz, gasto aprobado, gasto ajeno) fallaron con `NoReverseMatch: 'expense-update'`.
+- **Implementación mínima (Green):** `ExpenseUpdateView` con `get_queryset()` filtrado por **dos** condiciones simultáneas: `owner=self.request.user` y `status=Expense.Status.PENDING`. Si cualquiera de las dos falla, el gasto no aparece en el queryset y Django devuelve 404 automáticamente — no se necesitó lógica de permisos adicional más allá del filtro.
+- **Refactor:** ninguno; reutiliza `ExpenseForm` y `expense_form.html` ya existentes de la creación.
+
+### Ciclo 6: `PendingExpenseListView` y `ExpenseDecisionView` — núcleo del flujo de responsable
+
+- **Comportamiento esperado:** un responsable lista gastos pendientes, filtrables por empleado y estado; puede aprobar o rechazar dejando comentario; no puede decidir su propio gasto aunque tenga ambos roles; no puede decidir un gasto ya decidido; el cambio de estado y la creación del registro de decisión son atómicos.
+- **Test (Red):** ocho tests en total repartidos en dos clases, todos fallando inicialmente por `NoReverseMatch` (`'pending-expenses'`, luego `'expense-decide'`).
+- **Implementación mínima (Green):** `PendingExpenseListView` filtra por `status` (default `PENDING`) y opcionalmente por `owner`. `ExpenseDecisionView` usa `get_object_or_404(Expense, pk=pk, status=PENDING)` para resolver de una sola vez tanto "no existe" como "ya fue decidido" (criterio 11) sin chequeo aparte; usa el método ya existente `expense.can_be_decided_by(user)` para la regla de no auto-decisión (criterio 10); y envuelve la creación del `Decision` y el cambio de `expense.status` en `transaction.atomic()` (criterio 12).
+- **Refactor:** ninguno necesario en esta iteración — el bloque `with transaction.atomic()` es corto y explícito, no amerita extracción a un método de servicio separado a esta escala.
+
+### Ciclo 7 (bugfix vía cobertura): `ResponsibleDashboardView`
+
+- **Comportamiento esperado:** un responsable que se loguea es redirigido a `r-dash`.
+- **Test (Red):** el reporte de `coverage --branch` reveló que la rama `is_responsible=True` de `CustomLoginView.get_success_url()` nunca se ejecutaba en tests. Al escribir el test que la ejercitaba, falló con `NoReverseMatch: 'r-dash'` — no un fallo de aserción, sino la confirmación de que la URL de destino literalmente no existía en el proyecto.
+- **Implementación mínima (Green):** `ResponsibleDashboardView` (`TemplateView` protegida por `ResponsibleRequiredMixin`) y su ruta.
+- **Refactor:** ninguno.
+
+Con estos ciclos documentados, el proyecto supera holgadamente el mínimo de tres ciclos TDD exigido por el enunciado.
