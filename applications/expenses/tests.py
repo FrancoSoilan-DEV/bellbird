@@ -3,6 +3,7 @@ from django.urls import reverse
 
 from applications.expenses.models import Expense
 from applications.users.models import User
+from .models import Decision
 
 # ==========================================
 # ----- Employee
@@ -266,3 +267,92 @@ class PendingExpenseListViewTests(TestCase):
         response = self.client.get(reverse('pending-expenses'))
 
         self.assertEqual(response.status_code, 403)
+        
+        
+class ExpenseDecisionViewTests(TestCase):
+    def setUp(self):
+        self.responsible = User.objects.create_user(
+            username='responsable1', password='pass123',
+            is_employee=False, is_responsible=True,
+        )
+        self.employee = User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        self.dual_role = User.objects.create_user(
+            username='dual1', password='pass123',
+            is_employee=True, is_responsible=True,
+        )
+        self.expense = Expense.objects.create(
+            owner=self.employee, title='Gasto', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01',
+        )
+        self.own_expense = Expense.objects.create(
+            owner=self.dual_role, title='Gasto propio', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01',
+        )
+
+    def test_responsible_can_approve_pending_expense(self):
+        self.client.login(username='responsable1', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-decide', args=[self.expense.pk]),
+            {'result': Decision.Result.APPROVED, 'comment': 'Todo en orden'},
+        )
+
+        self.expense.refresh_from_db()
+        self.assertEqual(self.expense.status, Expense.Status.APPROVED)
+        self.assertEqual(self.expense.decision.result, Decision.Result.APPROVED)
+        self.assertEqual(self.expense.decision.responsible, self.responsible)
+        self.assertEqual(response.status_code, 302)
+
+    def test_responsible_can_reject_pending_expense(self):
+        self.client.login(username='responsable1', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-decide', args=[self.expense.pk]),
+            {'result': Decision.Result.REJECTED, 'comment': 'Falta comprobante'},
+        )
+
+        self.expense.refresh_from_db()
+        self.assertEqual(self.expense.status, Expense.Status.REJECTED)
+        self.assertEqual(response.status_code, 302)
+
+    def test_cannot_decide_own_expense_even_as_responsible(self):
+        self.client.login(username='dual1', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-decide', args=[self.own_expense.pk]),
+            {'result': Decision.Result.APPROVED, 'comment': 'Autoaprobado'},
+        )
+
+        self.own_expense.refresh_from_db()
+        self.assertEqual(self.own_expense.status, Expense.Status.PENDING)
+        self.assertFalse(Decision.objects.filter(expense=self.own_expense).exists())
+        self.assertEqual(response.status_code, 403)
+
+    def test_cannot_decide_already_decided_expense(self):
+        self.client.login(username='responsable1', password='pass123')
+        self.client.post(
+            reverse('expense-decide', args=[self.expense.pk]),
+            {'result': Decision.Result.APPROVED, 'comment': 'Primera decisión'},
+        )
+
+        response = self.client.post(
+            reverse('expense-decide', args=[self.expense.pk]),
+            {'result': Decision.Result.REJECTED, 'comment': 'Segundo intento'},
+        )
+
+        self.assertEqual(Decision.objects.filter(expense=self.expense).count(), 1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_employee_cannot_access_decision_view(self):
+        self.client.login(username='empleado1', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-decide', args=[self.expense.pk]),
+            {'result': Decision.Result.APPROVED, 'comment': 'No debería poder'},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        
