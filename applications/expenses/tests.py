@@ -356,3 +356,19 @@ class ExpenseDecisionViewTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         
+class ResponsibleDashboardProtectionTests(TestCase):
+    def test_anonymous_user_is_redirected_to_login(self):
+        response = self.client.get(reverse('r-dash'))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_employee_without_responsible_role_is_forbidden(self):
+        User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        self.client.login(username='empleado1', password='pass123')
+
+        response = self.client.get(reverse('r-dash'))
+
+        self.assertEqual(response.status_code, 403)

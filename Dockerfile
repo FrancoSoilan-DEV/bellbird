@@ -10,7 +10,7 @@ FROM python:3.13-slim
 RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl \
     && rm -rf /var/lib/apt/lists/* && useradd --create-home appuser
 WORKDIR /app
-COPY --from=builder /root/.local /home/appuser/.local
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
 COPY --chown=appuser:appuser . .
 USER appuser
 ENV PATH=/home/appuser/.local/bin:$PATH
