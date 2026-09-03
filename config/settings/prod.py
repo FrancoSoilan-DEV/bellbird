@@ -2,6 +2,18 @@ from .base import *
 import os
 import dj_database_url
 
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+] + MIDDLEWARE[1:]
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 SECRET_KEY = os.environ['SECRET_KEY']  # sin default: debe fallar si falta
 
 DEBUG = False

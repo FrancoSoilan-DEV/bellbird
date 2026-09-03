@@ -1,26 +1,82 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>{{ expense.title }}</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ expense.title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EDF1EA; --ink: #24312B; --ink-soft: #5C6B5E; --rule: #C9D2C3;
+    --accent: #2C4870; --accent-soft: #DCE3EE;
+    --approved: #3B6146; --approved-bg: #DCEBDD;
+    --rejected: #8B3A2E; --rejected-bg: #F1DFDA;
+    --pending: #96691E;  --pending-bg: #F1E4C9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; line-height: 1.5; }
+  a { color: var(--accent); }
+  header { display: flex; justify-content: space-between; align-items: baseline; max-width: 700px; margin: 0 auto; padding: 2rem 1.5rem 1rem; border-bottom: 1px solid var(--rule); }
+  header h1 { font-family: 'Source Serif 4', serif; font-size: 1.4rem; margin: 0; font-weight: 600; }
+  nav a { font-size: 0.9rem; }
+  main { max-width: 700px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .back { display: inline-block; margin-bottom: 1.5rem; font-size: 0.88rem; }
+  .title-row { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+  .expense-title { font-family: 'Source Serif 4', serif; font-size: 1.9rem; margin: 0 0 0.3rem; }
+  .tag { font-size: 0.85rem; padding: 0.3rem 0.7rem; border-radius: 2px; white-space: nowrap; }
+  .tag-pending  { background: var(--pending-bg);  color: var(--pending); }
+  .tag-approved { background: var(--approved-bg); color: var(--approved); }
+  .tag-rejected { background: var(--rejected-bg); color: var(--rejected); }
+  dl { margin: 2rem 0; border-top: 1px solid var(--rule); }
+  dl > div { display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 1px solid var(--rule); }
+  dt { color: var(--ink-soft); }
+  dd { margin: 0; font-family: 'IBM Plex Mono', monospace; text-align: right; }
+  .description { margin: 1.5rem 0; color: var(--ink-soft); }
+  .decision { margin-top: 2rem; padding: 1.2rem; background: var(--paper-raised, #F5F8F3); border-left: 3px solid var(--ink-soft); }
+  .decision h2 { font-family: 'Source Serif 4', serif; font-size: 1.1rem; margin: 0 0 0.8rem; }
+  .decision p { margin: 0.3rem 0; font-size: 0.92rem; }
+  .actions { margin-top: 2rem; }
+  .btn { display: inline-block; padding: 0.65rem 1.2rem; border-radius: 3px; text-decoration: none; font-weight: 500; font-size: 0.95rem; border: 1px solid var(--accent); color: var(--accent); }
+  .btn:hover { background: var(--accent-soft); }
+</style>
 </head>
 <body>
-    <h1>{{ expense.title }}</h1>
-    <p>Estado: {{ expense.get_status_display }}</p>
-    <p>Categoría: {{ expense.get_category_display }}</p>
-    <p>Importe: {{ expense.amount }}</p>
-    <p>Fecha: {{ expense.date }}</p>
-    {% if expense.description %}<p>Descripción: {{ expense.description }}</p>{% endif %}
+<header>
+  <h1>Gastos — Empleado</h1>
+  <nav><a href="{% url 'e-dash' %}">Panel</a></nav>
+</header>
+<main>
+  <a class="back" href="{% url 'expense-list' %}">← Mis gastos</a>
 
-    {% if expense.decision %}
-        <h2>Decisión</h2>
-        <p>Resultado: {{ expense.decision.get_result_display }}</p>
-        <p>Comentario: {{ expense.decision.comment }}</p>
-        <p>Fecha: {{ expense.decision.decided_at }}</p>
-    {% endif %}
+  <div class="title-row">
+    <h2 class="expense-title">{{ expense.title }}</h2>
+    <span class="tag tag-{{ expense.status|lower }}">{{ expense.get_status_display }}</span>
+  </div>
 
-    {% if expense.can_be_edited %}
-        <p><a href="{% url 'expense-update' expense.pk %}">Editar</a></p>
-    {% endif %}
+  {% if expense.description %}<p class="description">{{ expense.description }}</p>{% endif %}
+
+  <dl>
+    <div><dt>Categoría</dt><dd>{{ expense.get_category_display }}</dd></div>
+    <div><dt>Importe</dt><dd>$ {{ expense.amount }}</dd></div>
+    <div><dt>Fecha</dt><dd>{{ expense.date }}</dd></div>
+  </dl>
+
+  {% if expense.decision %}
+    <div class="decision">
+      <h2>Decisión</h2>
+      <p><strong>{{ expense.decision.get_result_display }}</strong> por {{ expense.decision.responsible }}</p>
+      {% if expense.decision.comment %}<p>"{{ expense.decision.comment }}"</p>{% endif %}
+      <p>{{ expense.decision.decided_at }}</p>
+    </div>
+  {% endif %}
+
+  {% if expense.can_be_edited %}
+    <div class="actions">
+      <a class="btn" href="{% url 'expense-update' expense.pk %}">Editar</a>
+    </div>
+  {% endif %}
+</main>
 </body>
 </html>

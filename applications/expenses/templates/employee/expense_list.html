@@ -1,20 +1,80 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Mis gastos</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mis gastos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EDF1EA; --ink: #24312B; --ink-soft: #5C6B5E; --rule: #C9D2C3;
+    --accent: #2C4870; --accent-soft: #DCE3EE;
+    --approved: #3B6146; --approved-bg: #DCEBDD;
+    --rejected: #8B3A2E; --rejected-bg: #F1DFDA;
+    --pending: #96691E;  --pending-bg: #F1E4C9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; line-height: 1.5; }
+  a { color: var(--accent); }
+  header { display: flex; justify-content: space-between; align-items: baseline; max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem 1rem; border-bottom: 1px solid var(--rule); }
+  header h1 { font-family: 'Source Serif 4', serif; font-size: 1.4rem; margin: 0; font-weight: 600; }
+  nav { display: flex; gap: 1.25rem; font-size: 0.9rem; }
+  main { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .page-title { font-family: 'Source Serif 4', serif; font-size: 1.7rem; margin: 0 0 1.5rem; }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 0 1rem 0.9rem; border-bottom: 1px solid var(--rule);
+    border-left: 3px solid var(--ink-soft); text-decoration: none; color: inherit;
+  }
+  .row:hover { background: rgba(0,0,0,0.02); }
+  .row.status-pending  { border-left-color: var(--pending); }
+  .row.status-approved { border-left-color: var(--approved); }
+  .row.status-rejected { border-left-color: var(--rejected); }
+  .row-title { font-weight: 500; }
+  .row-meta { color: var(--ink-soft); font-size: 0.85rem; margin-top: 0.15rem; }
+  .row-right { text-align: right; }
+  .row-amount { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; }
+  .row-status { font-size: 0.82rem; margin-top: 0.2rem; }
+  .status-pending  .row-status { color: var(--pending); }
+  .status-approved .row-status { color: var(--approved); }
+  .status-rejected .row-status { color: var(--rejected); }
+  .empty { text-align: center; padding: 4rem 1rem; color: var(--ink-soft); }
+  .empty a { display: inline-block; margin-top: 1rem; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
 </head>
 <body>
-    <h1>Mis gastos</h1>
+<header>
+  <h1>Gastos — Empleado</h1>
+  <nav>
+    <a href="{% url 'e-dash' %}">Panel</a>
+    <a href="{% url 'expense-create' %}">Nuevo gasto</a>
+  </nav>
+</header>
+<main>
+  <h2 class="page-title">Mis gastos</h2>
 
-    {% if expenses %}
-      <ul>
-        {% for expense in expenses %}
-          <li>{{ expense.title }} — {{ expense.amount }} — {{ expense.get_status_display }}</li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No tenés gastos registrados</p>
-    {% endif %}
+  {% if expenses %}
+    {% for expense in expenses %}
+      <a class="row status-{{ expense.status|lower }}" href="{% url 'expense-detail' expense.pk %}">
+        <div>
+          <div class="row-title">{{ expense.title }}</div>
+          <div class="row-meta">{{ expense.get_category_display }} · {{ expense.date }}</div>
+        </div>
+        <div class="row-right">
+          <div class="row-amount">$ {{ expense.amount }}</div>
+          <div class="row-status">{{ expense.get_status_display }}</div>
+        </div>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <p>No tenés gastos registrados todavía.</p>
+      <a href="{% url 'expense-create' %}">Registrar el primero</a>
+    </div>
+  {% endif %}
+</main>
 </body>
 </html>

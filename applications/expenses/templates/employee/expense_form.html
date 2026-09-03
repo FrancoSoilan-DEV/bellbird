@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if object %}Editar gasto{% else %}Nuevo gasto{% endif %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EDF1EA; --ink: #24312B; --ink-soft: #5C6B5E; --rule: #C9D2C3;
+    --accent: #2C4870; --accent-soft: #DCE3EE; --rejected: #8B3A2E; --rejected-bg: #F1DFDA;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; line-height: 1.5; }
+  a { color: var(--accent); }
+  header { max-width: 560px; margin: 0 auto; padding: 2rem 1.5rem 1rem; border-bottom: 1px solid var(--rule); }
+  header h1 { font-family: 'Source Serif 4', serif; font-size: 1.4rem; margin: 0; font-weight: 600; }
+  main { max-width: 560px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .page-title { font-family: 'Source Serif 4', serif; font-size: 1.7rem; margin: 0 0 1.8rem; }
+  .field { margin-bottom: 1.3rem; }
+  label { display: block; font-size: 0.88rem; color: var(--ink-soft); margin-bottom: 0.35rem; }
+  input, select, textarea {
+    width: 100%; padding: 0.6rem 0.7rem; border: 1px solid var(--rule); border-radius: 3px;
+    background: #fff; color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; font-size: 0.95rem;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  textarea { resize: vertical; min-height: 4.5rem; }
+  .field-error { color: var(--rejected); font-size: 0.85rem; margin: 0.35rem 0 0; }
+  .non-field-errors { background: var(--rejected-bg); color: var(--rejected); padding: 0.8rem 1rem; border-radius: 3px; margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .form-actions { display: flex; gap: 0.75rem; margin-top: 1.8rem; }
+  .btn { padding: 0.65rem 1.3rem; border-radius: 3px; font-weight: 500; font-size: 0.95rem; border: 1px solid transparent; cursor: pointer; font-family: inherit; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #223a5c; }
+  .btn-cancel { color: var(--ink-soft); background: transparent; border-color: var(--rule); }
+</style>
+</head>
+<body>
+<header><h1>Gastos — Empleado</h1></header>
+<main>
+  <h2 class="page-title">{% if object %}Editar gasto{% else %}Nuevo gasto{% endif %}</h2>
+
+  {% if form.non_field_errors %}
+    <div class="non-field-errors">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Guardar</button>
+      <a class="btn btn-cancel" href="{% url 'e-dash' %}">Cancelar</a>
+    </div>
+  </form>
+</main>
+</body>
+</html>
