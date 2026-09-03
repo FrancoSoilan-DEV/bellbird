@@ -134,4 +134,78 @@ class ExpenseDetailViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
         
         
+class ExpenseUpdateViewTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='empleado1', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        self.other = User.objects.create_user(
+            username='empleado2', password='pass123',
+            is_employee=True, is_responsible=False,
+        )
+        self.pending_expense = Expense.objects.create(
+            owner=self.owner, title='Original', category=Expense.Category.OTHER,
+            amount='10.00', date='2026-09-01',
+        )
+        self.approved_expense = Expense.objects.create(
+            owner=self.owner, title='Ya aprobado', category=Expense.Category.OTHER,
+            amount='20.00', date='2026-09-01', status=Expense.Status.APPROVED,
+        )
+
+    def test_owner_can_edit_pending_expense(self):
+        self.client.login(username='empleado1', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-update', args=[self.pending_expense.pk]),
+            {
+                'title': 'Editado',
+                'category': Expense.Category.OTHER,
+                'amount': '15.00',
+                'date': '2026-09-01',
+                'description': '',
+            }
+        )
+
+        self.pending_expense.refresh_from_db()
+        self.assertEqual(self.pending_expense.title, 'Editado')
+        self.assertEqual(response.status_code, 302)
+
+    def test_cannot_edit_approved_expense(self):
+        self.client.login(username='empleado1', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-update', args=[self.approved_expense.pk]),
+            {
+                'title': 'Intento de edición',
+                'category': Expense.Category.OTHER,
+                'amount': '99.00',
+                'date': '2026-09-01',
+                'description': '',
+            }
+        )
+
+        self.approved_expense.refresh_from_db()
+        self.assertEqual(self.approved_expense.title, 'Ya aprobado')
+        self.assertEqual(response.status_code, 404)
+
+    def test_employee_cannot_edit_others_expense(self):
+        self.client.login(username='empleado2', password='pass123')
+
+        response = self.client.post(
+            reverse('expense-update', args=[self.pending_expense.pk]),
+            {
+                'title': 'Intento ajeno',
+                'category': Expense.Category.OTHER,
+                'amount': '99.00',
+                'date': '2026-09-01',
+                'description': '',
+            }
+        )
+
+        self.pending_expense.refresh_from_db()
+        self.assertEqual(self.pending_expense.title, 'Original')
+        self.assertEqual(response.status_code, 404)
         
+        
+    
